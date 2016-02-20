@@ -7,6 +7,10 @@ namespace Phlite\Util;
  * on key=>value mapping. This is based on the PHP ArrayObject, but is
  * actually extendable, allows access to the protected $storage array, and
  * provides easier sorting interfaces.
+ *
+ * ArrayAccess lookups on non-existant keys will raise an exception, again,
+ * simlar to Python. Use the ::get() method to try and fetch a value by key
+ * while also optionally providing a default.
  */
 class ArrayObject
 extends BaseList

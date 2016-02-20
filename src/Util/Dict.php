@@ -7,6 +7,13 @@ namespace Phlite\Util;
  * on key=>value mapping, objects are automatically hashed using
  * spl_object_hash. Other things raise KeyError when added to the dict.
  *
+ * Unlike the PHP array, any type can be used as the key, and the same object
+ * is supported for lookups and is retrieved via iteration.
+ *
+ * Unlike the Python dict, objects are retrieved in the same order they were
+ * stored. Since PHP's behaves like an ordered map, then this behaves like an
+ * ordered dict.
+ *
  * Sorting functions have been dropped, but could be borrowed from the
  * ArrayObject itself:
  *
@@ -15,8 +22,6 @@ namespace Phlite\Util;
  * >>> $b->asort();
  *
  * This class supports objects used as keys as well.
- *
- * TODO: Fix serialization with objects (rekey on wakeup)
  */
 class Dict
 implements \Iterator, \ArrayAccess, \Serializable, \Countable {
@@ -37,6 +42,11 @@ implements \Iterator, \ArrayAccess, \Serializable, \Countable {
 
     function keys() {
         return array_keys($this->storage);
+    }
+
+    function iterKeys() {
+        for ($i = 0, $k = count($this->storage); $i < $k; $i++)
+            yield $this->storage[$i][0];
     }
 
     function pop($key, $default=null) {
@@ -75,8 +85,18 @@ implements \Iterator, \ArrayAccess, \Serializable, \Countable {
         return $values;
     }
 
+    function iterValues() {
+        for ($i = 0, $k = count($this->storage); $i < $k; $i++)
+            yield $this->storage[$i][1];
+    }
+
     function items() {
         return array_values($this->storage);
+    }
+
+    function iterItems() {
+        for ($i = 0, $k = count($this->storage); $i < $k; $i++)
+            yield $this->storage[$i];
     }
 
     static function fromKeys(\Traversable $keys, $value=false) {

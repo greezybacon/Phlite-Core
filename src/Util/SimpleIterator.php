@@ -8,7 +8,7 @@ namespace Phlite\Util;
  * adapts the Python method onto the PHP method for simplified iterator classes.
  */
 abstract class SimpleIterator
-implements Iterator {
+implements \Iterator {
     protected $__key;
     protected $__value;
     protected $__valid = true;

@@ -4,9 +4,9 @@ namespace Phlite\Util;
 
 abstract class CachingIterator
 extends SimpleIterator
-implements ArrayAccess {
+implements \ArrayAccess, \Countable {
     protected $__cache = array();
-    protected $__i = -1;
+    protected $__i = 0;
     protected $__closed = false;
 
     function getCache() {
@@ -14,13 +14,13 @@ implements ArrayAccess {
     }
 
     function rewind() {
-        $this->__i = -1;
+        $this->__i = 0;
         parent::rewind();
     }
 
     function next() {
         $this->__i++;
-        if (!$this->__closed && count($this->__cache) < $this->__i) {
+        if (!$this->__closed) {
             parent::next();
             if ($this->__valid) {
                 $this->__cache[] = array($this->__key, $this->__value);
@@ -41,7 +41,7 @@ implements ArrayAccess {
     }
 
     function valid() {
-        return count($this->__cache) > $this->__i;
+        return count($this->__cache) >= $this->__i;
     }
 
     protected function fillTo($offs) {
@@ -49,10 +49,11 @@ implements ArrayAccess {
             $this->next();
     }
 
+    // ArrayAccess interface
     function offsetGet($offs) {
         if (!$this->offsetExists($offs))
             throw new \Exception($offs.': Does not exist in this iterator');
-        return $this->__cache[$offs];
+        return $this->__cache[$offs][1];
     }
 
     function offsetExists($offs) {
@@ -65,5 +66,10 @@ implements ArrayAccess {
     }
     function offsetUnset($offs) {
         throw new \Exception('Iterator is read-only');
+    }
+
+    // Countable interface
+    function count() {
+        return count($this->asArray());
     }
 }
