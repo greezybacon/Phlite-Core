@@ -1,0 +1,24 @@
+{
+    "name": "phlite/phlite-core",
+    "description": "Phlite, the ultra lightweight PHP web application framework",
+    "version": "0.0.1",
+    "license": "MIT",
+
+    "authors": [
+        {
+            "name": "Jared Hancock",
+            "email": "gravydish@gmail.com",
+            "role": "Developer"
+        }
+    ],
+
+    "require": {
+        "php": ">= 5.6.0",
+        "phpunit/phpunit": "< 5.3"
+    },
+
+    "autoload": {
+        "classmap": ["src/"],
+        "psr-4": {"Phlite\\": "src/"}
+    }
+}
