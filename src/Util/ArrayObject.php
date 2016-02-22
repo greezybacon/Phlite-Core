@@ -15,11 +15,6 @@ namespace Phlite\Util;
 class ArrayObject
 extends BaseList
 implements \ArrayAccess {
-
-    function __construct(array $array=array()) {
-        $this->storage = $array;
-    }
-
     function clear() {
         $this->storage = array();
     }

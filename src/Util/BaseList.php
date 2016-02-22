@@ -4,8 +4,12 @@ namespace Phlite\Util;
 
 abstract class BaseList
 implements \Countable, \IteratorAggregate, \Serializable, \JsonSerializable {
-
     protected $storage = array();
+
+    function __construct(/* Iterable */ $array=array()) {
+        foreach ($array as $k=>$v)
+            $this->storage[$k] = $v;
+    }
 
     /**
      * Sort the list in place.
@@ -13,12 +17,13 @@ implements \Countable, \IteratorAggregate, \Serializable, \JsonSerializable {
      * Parameters:
      * $key - (callable|int) A callable function to produce the sort keys
      *      or one of the SORT_ constants used by the array_multisort
-     *      function
+     *      function. The callable will receive both the value and the key as
+     *      separate parameters.
      * $reverse - (bool) true if the list should be sorted descending
      */
     function sort($key=false, $reverse=false) {
         if (is_callable($key)) {
-            $keys = array_map($key, $this->storage);
+            $keys = array_map($key, $this->storage, $this->keys());
             array_multisort($keys, $reverse ? SORT_DESC : SORT_ASC,
                 $this->storage);
         }
@@ -30,38 +35,22 @@ implements \Countable, \IteratorAggregate, \Serializable, \JsonSerializable {
             array_multisort($this->storage,
                 $reverse ? SORT_DESC : SORT_ASC, $key);
         }
-        elseif ($reverse) {
-            rsort($this->storage);
+        else {
+            array_multisort($this->storage, $reverse ? SORT_DESC : SORT_ASC);
         }
-        else
-            sort($this->storage);
     }
 
-    function ksort($key=false, $reverse=false) {
-        if (is_callable($key)) {
-            $keys = array_map($key, array_keys($this->storage));
-            array_multisort($keys, $this->storage,
-                $reverse ? SORT_DESC : SORT_ASC);
-        }
-        elseif (is_array($key)) {
-            array_multisort($key, $this->storage,
-                $reverse ? SORT_DESC : SORT_ASC);
-        }
-        else {
-             ksort($this->storage);
-        }
+    function ksort($reverse=false) {
+        return $this->sort(function($v, $k) { return $k; }, $reverse);
     }
 
     function reverse() {
-        return array_reverse($this->storage);
+        return $this->sort(range(0, count($this->storage)-1), true);
     }
 
     function filter($callable) {
-        $new = new static();
-        foreach ($this->storage as $i=>$v)
-            if ($callable($v, $i))
-                $new[] = $v;
-        return $new;
+        return new static(array_filter($this->storage, $callable,
+            ARRAY_FILTER_USE_BOTH));
     }
 
     // IteratorAggregate
