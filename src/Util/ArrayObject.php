@@ -15,6 +15,11 @@ namespace Phlite\Util;
 class ArrayObject
 extends BaseList
 implements \ArrayAccess {
+    function __construct(array $array=array()) {
+        foreach ($array as $k=>$v)
+            $this[$k] = $v;
+    }
+
     function clear() {
         $this->storage = array();
     }
@@ -29,6 +34,11 @@ implements \ArrayAccess {
 
     function keys() {
         return array_keys($this->storage);
+    }
+
+    function iterKeys() {
+        foreach ($this->storage as $k=>$v)
+            yield $k;
     }
 
     function pop($key, $default=null) {
@@ -98,8 +108,11 @@ implements \ArrayAccess {
         return $array;
     }
 
-    static function fromKeys(Traversable $keys, $value=false) {
-        return new static(array_fill($keys, $value));
+    static function fromKeys(/* Traversable */ $keys, $value=false) {
+        $list = new static();
+        foreach ($keys as $k)
+            $list[$k] = $value;
+        return $list;
     }
 
     // ArrayAccess

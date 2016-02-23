@@ -21,13 +21,7 @@ namespace Phlite\Util;
  */
 class CaseArrayObject
 extends ArrayObject {
-    
     protected $keys = array();
-    
-    function __construct(array $array=array()) {
-        foreach ($array as $k=>$v)
-            $this[$k] = $v;
-    }
     
     protected function convertKey($key) {
         static $hasIntl, $hasMbstring;
@@ -48,14 +42,16 @@ extends ArrayObject {
     }
     
     // Provide collated sort functionality
-    function ksort($key=false, $reverse=false) {
-        return parent::ksort($key ?: $this->keys, $reverse);
+    function ksort($reverse=false) {
+        $lk = array_flip($this->keys);
+        return parent::sort(function($v,$k) use ($lk) { return $lk[$k]; },
+            $reverse);
     }
     
     // ArrayAccess
     function offsetExists($key) {
         $K = (is_string($key)) ? $this->convertKey($key) : $key;
-        return isset($this->keys[$offset]); 
+        return isset($this->keys[$K]);
     }
     function offsetGet($key) {
         $K = (is_string($key)) ? $this->convertKey($key) : $key;
