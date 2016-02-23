@@ -7,7 +7,6 @@ namespace Phlite\Util;
  */
 class Set
 implements \IteratorAggregate, \ArrayAccess, \Serializable, \Countable {
-
     protected $storage = array();
 
     function __construct(array $array=array()) {
@@ -29,6 +28,14 @@ implements \IteratorAggregate, \ArrayAccess, \Serializable, \Countable {
     function addAll(/* Iterable */ $other) {
         foreach ($other as $k)
             $this->add($k);
+    }
+
+    function contains($value) {
+        return isset($this->storage[$value]);
+    }
+
+    function remove($value) {
+        unset($this->storage[$value]);
     }
 
     // Set operations

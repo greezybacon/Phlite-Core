@@ -125,7 +125,10 @@ implements \ArrayAccess {
         return $this->storage[$offset];
     }
     function offsetSet($key, $value) {
-        $this->storage[$key] = $value;
+        if ($key === null)
+            $this->storage[] = $value;
+        else
+            $this->storage[$key] = $value;
     }
     function offsetUnset($offset) {
          unset($this->storage[$offset]);

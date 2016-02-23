@@ -67,4 +67,11 @@ extends PHPUnit_Framework_TestCase {
       $list = Util\ArrayObject::fromKeys($list->iterKeys(), 2);
       $this->assertEquals(['a'=>2, 'b'=>2, 'c'=>2], $list->asArray());
   }
+
+  function testArrayAppend() {
+      $list = new Util\ArrayObject();
+      $list[] = 1;
+      $list[] = 2;
+      $this->assertEquals([1,2], $list->asArray());
+  }
 }
