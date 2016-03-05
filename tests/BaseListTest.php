@@ -21,7 +21,7 @@ extends PHPUnit_Framework_TestCase {
   }
 
   function getList() {
-      return new Thingy(array_values($this->getKeyedList()->storage()));
+      return new Thingy($this->getKeyedList()->values());
   }
 
   function testSimpleSort() {
