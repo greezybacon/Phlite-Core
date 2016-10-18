@@ -121,13 +121,12 @@ class BaseSignal {
     }
 }
 
-abstract class Signal
-extends BaseSignal {
+abstract class Signal {
     static function connect($callable, $object=null, $check=null) {
-        return parent::connect(get_called_class(), $callable, $object, $check);
+        return BaseSignal::connect(get_called_class(), $callable, $object, $check);
     }
 
     static function send($object, &$data=null) {
-        return parent::send(get_called_class(), $object, $data);
+        return BaseSignal::send(get_called_class(), $object, $data);
     }
 }

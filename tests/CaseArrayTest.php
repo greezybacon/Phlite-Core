@@ -23,6 +23,7 @@ extends PHPUnit_Framework_TestCase {
 
   function testCaseTransformation() {
       $list = $this->getKeyedList();
+      $this->assertEquals($list['qa'], 7);
       $list['QA'] += 5;
       $this->assertEquals($list['qa'], 12);
       $T = $list->keys();

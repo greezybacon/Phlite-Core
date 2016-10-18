@@ -17,7 +17,7 @@ extends Monolog\Registry {
     /**
      * Get a logger with the specified name (channel name), creating it if
      * it doesn't yet exist. This name is a dot-separated hierarchical name,
-     * sucah as "a", "a.b.", "a.b.c" or similar.
+     * such as "a", "a.b.", "a.b.c" or similar.
      *
      * If a PlaceHolder existed for the specified name [i.e. the logger
      * didn't exist but a child of it did], replace it with the created

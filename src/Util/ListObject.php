@@ -15,11 +15,6 @@ class ListObject
 extends BaseList
 implements \ArrayAccess {
 
-    function __construct(/* Iterable */ $array=array()) {
-        foreach ($array as $v)
-            $this->storage[] = $v;
-    }
-
     function append($what) {
         $this->storage[] = $what;
     }
