@@ -15,7 +15,7 @@ namespace Phlite\Util;
 class ArrayObject
 extends BaseList
 implements \ArrayAccess {
-    function __construct(array $array=array()) {
+    function __construct(/* Iterable */ $array=array()) {
         foreach ($array as $k=>$v)
             $this[$k] = $v;
     }
