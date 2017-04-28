@@ -20,6 +20,7 @@ class Cmd {
     var $undoc_header = "Undocumented commands";
     var $nohelp = "*** No help on %s";
     var $completekey = false;
+    var $history_file = false;
 
     function __construct($completekey='tab', $stdin=false, $stdout=false) {
         $this->stdin = $stdin !== false ? $stdin : new BufferedInputStream('php://stdin');
@@ -32,6 +33,8 @@ class Cmd {
     function cmdloop($intro=false) {
         $this->preloop();
         if ($this->completekey) {
+            if ($this->history_file && file_exists($this->history_file))
+                readline_read_history($this->history_file);
             readline_completion_function(array($this, 'complete'));
         }
         if ($intro)
@@ -74,6 +77,8 @@ class Cmd {
             $stop = $this->postcmd($stop, $line);
         }
         $this->postloop();
+        if ($this->completekey)
+            $this->writeHistory();
     }
 
     function precmd($line) {
@@ -88,6 +93,12 @@ class Cmd {
     }
 
     function postloop() {
+    }
+
+    private function writeHistory() {
+        if ($this->history_file)
+            readline_write_history($this->history_file);
+        // TODO: Honor HISTSIZE or HISTORY environment variable
     }
 
     function parseline($line) {

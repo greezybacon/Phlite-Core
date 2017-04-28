@@ -9,13 +9,20 @@ do {
         break;
 
     $path = realpath(dirname(__file__));
-    while (!file_exists($path . DIRECTORY_SEPARATOR . "composer.json")) {
+    while (!file_exists($path . DIRECTORY_SEPARATOR . "vendor")) {
         $path = realpath($path . DIRECTORY_SEPARATOR . '..');
     }
     require_once $path . DIRECTORY_SEPARATOR . 'vendor/autoload.php';
     unset($path);
 } while (0);
 
+/**
+ * An interactive environment for PHP, similar to `php -a`, with readline
+ * support and tab-completion and extensiblity.
+ *
+ * In the interactive environment, the result of the previous expression is
+ * continuously available vai the $_ variable.
+ */
 class Interact
 extends Cmd {
     var $prompt = ">>> ";
@@ -49,8 +56,22 @@ EOT
             $___line = 'return ' . $___line;
         // Eval the current line. — Try not to crash!!
         try {
-            $___result = null;
             $___result = eval($___line);
+            // Capture new scope after evaluation
+            $this->scope = get_defined_vars();
+            // Output expression result
+            if ($___result !== null) {
+                if (is_object($___result)
+                        && method_exists($___result, '__toString'))
+                    $repr = $___result->__toString();
+                else
+                    $repr = var_export($___result, true);
+                fprintf($this->stdout, "%s\n", $repr);
+                $this->scope['_'] = & $___result;
+            }
+            unset($this->scope['___line']);
+            unset($this->scope['___result']);
+            unset($this->scope['this']);
         } 
         catch (\Exception $___e) {
             fwrite(STDERR, sprintf(
@@ -63,22 +84,6 @@ EOT
         catch (\Error $___e) {
             fprintf(STDERR, "%s\n", $___e->getMessage());
         }
-        // Capture new scope after evaluation
-        $this->scope = get_defined_vars();
-        // Output expression result
-        if ($___result !== null) {
-            if (is_object($___result)
-                    && method_exists($___result, '__toString'))
-                $repr = $___result->__toString();
-            else
-                $repr = var_export($___result, true);
-            fprintf($this->stdout, "%s\n", $repr);
-            $this->scope['_'] = & $___result;
-        }
-        unset($this->scope['___line']);
-        unset($this->scope['___result']);
-        unset($this->scope['this']);
-        unset($this->scope['___e']);
     }
 
     function do_EOF($arg) {
