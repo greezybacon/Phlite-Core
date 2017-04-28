@@ -1,11 +1,23 @@
 <?php
-
 namespace Phlite\Cli;
 
-require_once 'Cmd.php';
+// Allow running directly
+do {
+    if (PHP_SAPI != 'cli') break;
+    if (empty ($_SERVER['PHP_SELF'])
+            || FALSE === strpos($_SERVER['PHP_SELF'], basename(__file__)) )
+        break;
 
-class Interact extends Cmd {
+    $path = realpath(dirname(__file__));
+    while (!file_exists($path . DIRECTORY_SEPARATOR . "composer.json")) {
+        $path = realpath($path . DIRECTORY_SEPARATOR . '..');
+    }
+    require_once $path . DIRECTORY_SEPARATOR . 'vendor/autoload.php';
+    unset($path);
+} while (0);
 
+class Interact
+extends Cmd {
     var $prompt = ">>> ";
     var $prompt1 = ">>> ";
     var $prompt2 = "... ";
@@ -35,20 +47,21 @@ EOT
         // If the line is an expression, capture the result
         if ($this->isExpr)
             $___line = 'return ' . $___line;
-        $___line = "try{{$___line}}catch(Exception \$___e){}";
         // Eval the current line. — Try not to crash!!
         try {
+            $___result = null;
             $___result = eval($___line);
         } 
-        catch (Exception $___e) {
-        }
-        if (isset($___e)) {
+        catch (\Exception $___e) {
             fwrite(STDERR, sprintf(
                 "Backtrace (most recent call first):\n%s\n%s: %s\n",
                 $___e->getTraceAsString(),
                 get_class($___e),
                 $___e->getMessage()
             ));
+        }
+        catch (\Error $___e) {
+            fprintf(STDERR, "%s\n", $___e->getMessage());
         }
         // Capture new scope after evaluation
         $this->scope = get_defined_vars();
@@ -59,7 +72,7 @@ EOT
                 $repr = $___result->__toString();
             else
                 $repr = var_export($___result, true);
-            fwrite($this->stdout, $repr . "\n");
+            fprintf($this->stdout, "%s\n", $repr);
             $this->scope['_'] = & $___result;
         }
         unset($this->scope['___line']);
@@ -298,11 +311,11 @@ EOT
 
 // Allow running directly
 do {
-  require_once 'Cmd.php';
-  if (PHP_SAPI != 'cli') break;
-  if (empty ($_SERVER['PHP_SELF'])
-        || FALSE === strpos($_SERVER['PHP_SELF'], basename(__file__)) )
-    break;
-  $i = new Interact();
-  $i->cmdloop();
+    if (PHP_SAPI != 'cli') break;
+    if (empty ($_SERVER['PHP_SELF'])
+            || FALSE === strpos($_SERVER['PHP_SELF'], basename(__file__)) )
+        break;
+
+    $i = new Interact();
+    $i->cmdloop();
 } while (0);

@@ -1,16 +1,13 @@
 <?php
-
 namespace Phlite\Cli;
 
-use Phlite\Cli\KeyboardInterrupt;
 use Phlite\Io\BufferedInputStream;
+use Philte\Io\OutputStream;
 
-// TODO: Use an app to start the autoloader
-require_once dirname(dirname(__file__)) . '/Io/InputStream.php';
-require_once dirname(dirname(__file__)) . '/Io/BufferedInputStream.php';
-
+/**
+ * Command line interactive module. Ported from Python's cmd module
+ */
 class Cmd {
-
     var $prompt = '(cmd) ';
     var $identchars =
         'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_';
@@ -24,7 +21,7 @@ class Cmd {
     var $nohelp = "*** No help on %s";
     var $completekey = false;
 
-    function __construct($completekey='tab' ,$stdin=false, $stdout=false) {
+    function __construct($completekey='tab', $stdin=false, $stdout=false) {
         $this->stdin = $stdin !== false ? $stdin : new BufferedInputStream('php://stdin');
         $this->stdout = $stdout !== false ? $stdout : fopen('php://output', 'w');
         $this->cmdqueue = array();
