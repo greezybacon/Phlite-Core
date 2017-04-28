@@ -72,13 +72,14 @@ class TermInfo {
      */
     static function forTerminal($TERM=false) {
         // TODO: Support varying TERM string
+        $TERM = $TERM ?: '';
 
         // Cache the result for future calls with the same $TERM
         if (isset(self::$terminfos[$TERM]))
             return self::$terminfos[$TERM];
 
         // Attempt to read from `infocmp`
-        if (!($info = popen('infocmp -I', 'r')))
+        if (!($info = popen("infocmp -I $TERM", 'r')))
             // Provide some fallback for ANSI, or Windows terminals
             return static::dumb();
 
@@ -90,21 +91,24 @@ class TermInfo {
         while (!isset($name));
 
         $matches = array();
-        if (!preg_match_all('`\s+(\w+)(?:[=#]([^,]+))?,`', fread($info, 4096), $matches, PREG_SET_ORDER))
+        if (!preg_match_all('`\s+(\w+)(?:([=#])([^,]+))?,`', fread($info, 4096), $matches, PREG_SET_ORDER))
             return;
 
         $caps = array();
         $esc = chr(27);
         foreach ($matches as $C) {
-            if (isset($C[2])) {
+            if (isset($C[3])) {
                 // Unescape escape sequences
-                $caps[$C[1]] = preg_replace_callback('`\^\w|\\\\E`',
+                $val = preg_replace_callback('`\^\w|\\\\E`',
                 function($m) use ($esc) {
                     if ($m[0][0] == '^')
                         return chr(ord($m[0][1]) - 64);
                     elseif ($m[0][1] == 'E')
                         return $esc;
-                }, $C[2]);
+                }, $C[3]);
+                if ($C[2] == '#')
+                    $val = (int) $val;
+                $caps[$C[1]] = $val;
             }
             else {
                 $caps[$C[1]] = true;
