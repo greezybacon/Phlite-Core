@@ -103,6 +103,9 @@ implements \ArrayAccess {
     }
 
     function __toString() {
-        return '['.implode(', ', $this->storage).']';
+        $items = array();
+        foreach ($this as $i)
+            $items[] = (string) $i;
+        return '['.implode(', ', $items).']';
     }
 }

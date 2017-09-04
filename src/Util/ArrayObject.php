@@ -135,7 +135,8 @@ implements \ArrayAccess {
     }
 
     function __toString() {
-        foreach ($this->storage as $key=>$v) {
+        $items = array();
+        foreach ($this as $key=>$value) {
             $items[] = (string) $key . '=> ' . (string) $value;
         }
         return '{'.implode(', ', $items).'}';
