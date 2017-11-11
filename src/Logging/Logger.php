@@ -16,21 +16,22 @@ extends Monolog\Logger {
 
     const NOTSET = 1000;
 
-    function __construct($name, $level=self::NOTSET, array $handlers = array(),
-        array $processors = array(), DateTimeZone $timezone = null
+    function __construct($name, $level=null, array $handlers = array(),
+        array $processors = array(), \DateTimeZone $timezone = null
     ) {
         parent::__construct($name, $handlers, $processors, $timezone);
-        $this->level = $this->_checkLevel($level);
+        if (isset($level))
+            $this->level = static::_checkLevel($level);
     }
 
     function setLevel($level) {
-        $this->level = $this->_checkLevel($level);
+        $this->level = static::_checkLevel($level);
     }
 
     function getEffectiveLevel() {
         $logger = $this;
         while ($logger) {
-            if ($logger->level) {
+            if (isset($logger->level)) {
                 return $logger->level;
             }
             $logger = $logger->parent;
@@ -45,12 +46,12 @@ extends Monolog\Logger {
         elseif ((string) $level == $level) {
             $levels = static::getLevels();
             if (!isset($levels[$level]))
-                throw new InvalidArgumentException(
+                throw new \InvalidArgumentException(
                     sprintf('Unknown level: %s', $level));
             $rv = $levels[$level];
         }
         else {
-            throw new InvalidArgumentException(
+            throw new \InvalidArgumentException(
                 sprintf('Level not an integer or a valid string: %s',
                     $level));
         }
@@ -58,9 +59,9 @@ extends Monolog\Logger {
     }
 
     function isEnabledFor($level) {
-        if (Registry::$disable >= $level)
+        if (Registry::$disable <= $level)
             return 0;
-        return $this->getEffectiveLevel() >= $level;
+        return $this->getEffectiveLevel() <= $level;
     }
 
     function addRecord($level, $message, array $context = array()) {

@@ -10,8 +10,8 @@ use Monolog;
  */
 class Registry
 extends Monolog\Registry {
-    static $loggerClass = 'Phlite\Logging\Logger';
-    static $disable = 0;
+    static $loggerClass = Logger::class;
+    static $disable = Logger::NOTSET;
     static $root;
 
     /**
@@ -52,9 +52,9 @@ extends Monolog\Registry {
     }
 
     static function setLoggerClass($class) {
-        if ($class != __NAMESPACE__ . '\Logger') {
-            if (!is_subclass_of($class, 'Logger')) {
-                throw new InvalidArgumentException(
+        if ($class != Logger::class) {
+            if (!is_subclass_of($class, Logger::class)) {
+                throw new \InvalidArgumentException(
                     'logger not derived from Phlite\Logging\Logger');
             }
         }
