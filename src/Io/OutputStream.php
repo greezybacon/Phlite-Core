@@ -62,8 +62,8 @@ class OutputStream {
     }
     function getTermInfo() {
         if (!$this->isatty())
-            return Cli\Terminfo::dumb();
+            return Cli\TermInfo::dumb();
 
-        return Cli\Terminfo::forTerminal();
+        return Cli\TermInfo::forTerminal();
     }
 }
