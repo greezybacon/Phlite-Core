@@ -191,60 +191,84 @@ class TermInfo {
      * arguments are interpreted according to the terminfo string, and the
      * result of the function is the bytes which should be sent to the
      * terminal.
+     *
+     * This compiler utilizes somewhat of a lambda calculus pattern with
+     * nested anonymous functions.
      */
-     protected function compile_terminfo($expr) {
+    protected function compile_terminfo($expr) {
         // `man terminfo` for details on the %X sequences
 
-        static $simple = array(
+        static $simple = null;
+        if ($simple === null)
+            $simple = array(
             // %%   outputs `%'
-            '%' => '$O[]="%";',
+            '%' => function($S) { return '%'; },
             // %c print pop() like %c in printf
-            'c' => '$O[]=chr(array_pop($S));',
-            'd' => '$O[]=array_pop($S);',
+            'c' => function(&$S) { return chr(array_pop($S)); },
+            'd' => function(&$S) { return array_pop($S); },
             // %+ %- %* %/ %m
             // arithmetic (%m is mod): push(pop() op pop())
-            '+' => '$S[]=array_pop($S)+array_pop($S);',
-            '-' => '$_=array_pop($S);$S[]=array_pop($S)-$_;',
-            '*' => '$S[]=array_pop($S)*array_pop($S);',
-            '/' => '$_=array_pop($S);$S[]=array_pop($S)/$_;',
-            'm' => '$_=array_pop($S);$S[]=array_pop($S)%$_;',
+            '+' => function(&$S) { $S[] = array_pop($S) + array_pop($S); },
+            '-' => function(&$S) { $_ = array_pop($S); $S[] = array_pop($S) - $_; },
+            '*' => function(&$S) { $S[] = array_pop($S) * array_pop($S); },
+            '/' => function(&$S) { $_ = array_pop($S); $S[] = array_pop($S) / $_; },
+            'm' => function(&$S) { $_ = array_pop($S); $S[] = array_pop($S) % $_; },
             // %& %| %^
             // bit operations (AND, OR and exclusive-OR): push(pop() op pop())
-            '&' => '$S[]=array_pop($S)&array_pop($S);',
-            '|' => '$S[]=array_pop($S)|array_pop($S);',
-            '^' => '$S[]=array_pop($S)^array_pop($S);',
+            '&' => function(&$S) { $S[] = array_pop($S) & array_pop($S); },
+            '|' => function(&$S) { $S[] = array_pop($S) | array_pop($S); },
+            '^' => function(&$S) { $S[] = array_pop($S) ^ array_pop($S); },
             // %= %> %<
             // logical operations: push(pop() op pop())
             // Flip the comparision b/c pops will reverse the operands
-            '<' => '$S[]=array_pop($S)>array_pop($S);',
-            '>' => '$S[]=array_pop($S)<array_pop($S);',
-            '=' => '$S[]=array_pop($S)==array_pop($S);',
+            '<' => function(&$S) { $S[] = array_pop($S) > array_pop($S); },
+            '>' => function(&$S) { $S[] = array_pop($S) < array_pop($S); },
+            '=' => function(&$S) { $S[] = array_pop($S) == array_pop($S); },
             // %A, %O
             // logical AND and OR operations (for conditionals)
-            'A' => '$S[]=array_pop($S)&&array_pop($S);',
-            'O' => '$S[]=array_pop($S)||array_pop($S)',
+            'A' => function(&$S) { $S[] = array_pop($S) && array_pop($S); },
+            'O' => function(&$S) { $S[] = array_pop($S) || array_pop($S); },
             // %! %~
             // unary operations (logical and bit complement): push(op pop())
-            '!' => '$S[]=!array_pop($S);',
-            '~' => '$S[]=~array_pop($S);',
+            '!' => function(&$S) { $S[] = !array_pop($S); },
+            '~' => function(&$S) { $S[] = ~array_pop($S); },
             // %? expr %t thenpart %e elsepart %;
             // This forms an if-then-else.  The %e elsepart is optional.
             // Usually the %?  expr  part  pushes a value  onto the stack,
             // and %t pops it from the stack, testing if it is nonzero (true).
             // If it is zero (false), control passes to the %e (else) part.
-            '?' => '', // continue to process the if statement
-            'e' => '}else{',
-            'l' => '$S[]=strlen(array_pop($S));',
+            'l' => function(&$S) { $S[] = strlen(array_pop($S)); },
+            // The interpretation is really difficult:
+            // %i — add 1 to first two parameters (for ANSI terminals)
+            // What's a "parameter"?
+            'i' => function(&$S) { $S['A'][0]++; $S['A'][1]++; },
         );
+
+        $blocks = array();
+        $push = function($f) use (&$blocks) {
+            $blocks[count($blocks) - 1][] = $f;
+        };
+
+        $pop_block = function() use (&$blocks) {
+            $block = $blocks[count($blocks) - 1];
+            $blocks = array_slice($blocks, 0, -1);
+            return function(&$stack) use ($block) {
+                $output = '';
+                foreach ($block as $C) {
+                    $output .= $T = $C($stack);
+                }
+                return $output;
+            };
+        };
+
+        $push_block = function() use (&$blocks) {
+            $blocks[] = array();
+        };
 
         // Prologue
-        $cmds = array(
-            // Arguments are stored in $A, $V is stack vars, $O is output,
-            // and $S is the stack
-            '$V=$S=$O=array();',
-        );
+        $push_block();
 
-        $func = $pos = $braces = 0;
+        $func = $pos = 0;
         $len = strlen($expr);
         $buffer = '';
         while ($pos < $len) {
@@ -254,12 +278,12 @@ class TermInfo {
             }
             else {
                 if ($buffer) {
-                    $cmds[] = "\$O[]='".str_replace("'", "\\'", $buffer)."';";
+                    $push(function($S) use ($buffer) { return $buffer; });
                     $buffer = '';
                 }
                 $T = $expr[$pos++];
                 if (isset($simple[$T])) {
-                    $cmds[] = $simple[$T];
+                    $push($simple[$T]);
                 }
                 else switch ($T) {
                 case 'p':
@@ -268,52 +292,88 @@ class TermInfo {
                     $n = ((int) $expr[$pos++]) - 1;
                     if (substr($expr, $pos, 2) == '%d') {
                         // Optimization for `%p1%d`
-                        $cmds[] = '$O[]=$A['.$n.'];';
+                        $push(function($S) use ($n) { $S['A'][$n]; });
                         $pos += 2;
                     }
                     else
-                        $cmds[] = '$S[]=$A['.$n.'];';
+                        $push(function(&$S) use ($n) { $S[] = $S['A'][$n]; });
                     break;
                 case '{':
                     // %{nn}
                     // integer constant nn
-                    $rest = '';
+                    $n = '';
                     while ('}' != ($X = $expr[$pos++]))
-                        $rest .= $X;
-                    $cmds[] = "\$S[]={$rest};"; break;
+                        $n .= $X;
+                    $push(function(&$S) use ($n) { $S[] = (int) $n; });
+                    break;
                 case 'P':
                     // %P[a-z]
                     // set dynamic variable [a-z] to pop()
-                    $cmds[] = '$V["'.$expr[$pos++].'"]=array_pop($S);'; break;
+                    $char = $expr[$pos++];
+                    $push(function(&$S) use ($char) { $S['V'][$char] = array_pop($S); });
+                    break;
                 case 'g':
-                    // %g[a-z]
                     // get dynamic variable [a-z] and push it
-                    $cmds[] = '$S[]=$V["'.$expr[$pos++].'"]'; break;
-                case 'i':
-                    // The interpretation is really difficult:
-                    // %i — add 1 to first two parameters (for ANSI terminals)
-                    // What's a "parameter"?
-                    $cmds[] = '$A[0]++;@$A[1]++;';
+                    // %g[a-z]
+                    $char = $expr[$pos++];
+                    $push(function(&$S) use ($char) { $S[] = $S['V'][$char]; });
                     break;
                 case ';':
                     // End of if-then-else
-                    $cmds[] = '}';
-                    $braces--;
+                    // Create and utilize an inline-if style, where
+                    // iif := function(condition, if_true(), if_false())
+                    // Then, work right to left to create a closure chain using
+                    // this IIF function. Consider this code, where <x>
+                    // represents arbitrary code:
+                    // >>> %? <A> %t <B> %e <C> %;
+                    // => IIF(<A>, <B>, <C>)
+                    // >>> %? <A> %t <B> %e <C> %t <D> %e <E> %;
+                    // => IIF(<A>, <B>, IIF(<C>, <D>, <E>))
+                    //
+                    // If block count is odd, then there is no trailing %e
+                    if (count($blocks) % 2 == 1)
+                        $else = function($S) {};
+                    else
+                        $else = $pop_block();
+                    while (count($blocks) > 1) {
+                        $true = $pop_block();
+                        $cond = $pop_block();
+                        $else = function(&$S) use ($cond, $true, $else) {
+                            $T = $cond($S);
+                            if (array_pop($S)) {
+                                return $true($S);
+                            }
+                            else {
+                                return $else($S);
+                            }
+                        };
+                    }
+                    $push($else);
                     break;
+                case '?':
+                    // continue to process the expression and %t
                 case 't':
-                    // if (true) part of if-then-else
-                    $cmds[] = 'if(array_pop($S)){';
-                    $braces++;
+                    // if (true) part of if-then-else. The previous part,
+                    // the top-of-stack now, is the expression.
+                case 'e':
+                    // the ELSE part of an if-then-else. This could either
+                    // be an expression or a block. It depends if it is
+                    // followed by another %t
+                    // Place the TRUE part as the top-of-stack
+                    $push_block();
                     break;
                 default:
-                    // The default is assumed to be avalid printf token using
+                    // The default is assumed to be a valid printf token using
                     // the top-of-stack
                     $rest = "%$T";
                     while (false === strpos('doXxs', $T)) {
                         $T = $expr[$pos++];
                         $rest .= $T;
                     }
-                    $cmds[] = '$O[]=sprintf("'.$rest.'",array_pop($S));'; break;
+                    $push(function(&$S) use ($rest) {
+                        return sprintf($rest, array_pop($S));
+                    });
+                    break;
                 }
                 $func = true;
             }
@@ -321,14 +381,20 @@ class TermInfo {
         if (!$func)
             return $expr;
 
-        if ($braces)
-            $cmds[] = str_repeat('}', $braces);
         if ($buffer)
-            $cmds[] = "\$O[]='".str_replace("'", "\\'", $buffer)."';";
-
-        $cmds[] = 'return implode("",$O);';
+            $push(function($S) use ($buffer) { return $buffer; });
 
         // All arguments are passed as an array (from __call)
-        return create_function('$A', implode('', $cmds));
+        $code = $pop_block();
+        if (count($blocks))
+            throw new \RuntimeException(
+                'Terminfo capability compiler error. Ended with nested blocks: '
+                . count($blocks)
+            );
+
+        return function($A) use ($code) {
+            $stack = array('V' => array(), 'A' => $A);
+            return $code($stack);
+        };
     }
 }
